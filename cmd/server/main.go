@@ -14,6 +14,8 @@ func main() {
 	dsn := "root:1@tcp(127.0.0.1:3306)/shortlink_db?charset=utf8mb4&parseTime=True&loc=Local"
 	model.InitDB(dsn)
 
+	model.InitRedis()
+
 	r := gin.Default()
 
 	v1 := r.Group("/api/v1")

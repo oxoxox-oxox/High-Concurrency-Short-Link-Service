@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"shortlink/internal/model"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,12 +38,22 @@ func CreateShortLink(c *gin.Context) {
 func Redirect(c *gin.Context) {
 	shortCode := c.Param("short_code")
 
-	longURL, err := model.GetLongURL(shortCode)
+	longURL, err := model.RDB.Get(model.Ctx, "shortlink:"+shortCode).Result()
 
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "short link doesn't exist"})
+	if err == nil {
+		fmt.Println("Read from redis cache")
+		c.Redirect(http.StatusFound, longURL)
 		return
 	}
+
+	fmt.Println("Cache didn't match, Search it in the MySQL")
+	longURL, err = model.GetLongURL(shortCode)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Short link doesn't exist"})
+		return
+	}
+
+	model.RDB.Set(model.Ctx, "shortlink:"+shortCode, longURL, 24*time.Hour)
 
 	c.Redirect(http.StatusFound, longURL)
 }
